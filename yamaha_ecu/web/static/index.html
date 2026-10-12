@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Yamaha ECU Diagnostic, Telemetry & Tuning Studio - Mio GT 2015</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Top Navigation & Header Bar -->
+    <header class="top-header">
+      <div class="brand-cluster">
+        <div class="logo-mark">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+            <polyline points="2 17 12 22 22 17"></polyline>
+            <polyline points="2 12 12 17 22 12"></polyline>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <h1>YAMAHA ECU STUDIO <span class="badge-target">MIO GT 2015</span></h1>
+          <p class="subtitle">Full Diagnostics, RPS Telemetry & ECU Tuning Suite &bull; ECU 54P-H591A-00</p>
+        </div>
+      </div>
+
+      <!-- Live Heartbeat & Connection Badges -->
+      <div class="header-status">
+        <div class="status-pill" id="connection-pill">
+          <span class="status-dot disconnected"></span>
+          <span id="connection-status-text">TERPUTUS</span>
+        </div>
+        <div class="status-pill mode-pill" id="mode-pill">
+          <span id="mode-text">MOCK SIMULATOR</span>
+        </div>
+        <div class="telemetry-rate">
+          <span class="fps-val" id="telemetry-fps">0.0</span> <span class="fps-unit">Hz</span>
+        </div>
+        <button id="btn-toggle-connect" class="btn btn-connect">Hubungkan</button>
+      </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <nav class="nav-tabs" role="tablist">
+      <button class="nav-tab active" data-tab="tab-cockpit" id="tab-btn-cockpit">
+        <span class="tab-icon">🏎️</span> Cockpit Gauges
+      </button>
+      <button class="nav-tab" data-tab="tab-oscilloscope" id="tab-btn-oscilloscope">
+        <span class="tab-icon">📈</span> Live Oscilloscope
+      </button>
+      <button class="nav-tab" data-tab="tab-maps" id="tab-btn-maps">
+        <span class="tab-icon">🗺️</span> ECU Maps & Tuning
+      </button>
+      <button class="nav-tab" data-tab="tab-dtc" id="tab-btn-dtc">
+        <span class="tab-icon">🛠️</span> Diagnosa & DTC
+        <span class="dtc-counter-badge" id="dtc-badge" style="display:none;">0</span>
+      </button>
+      <button class="nav-tab" data-tab="tab-diag" id="tab-btn-diag">
+        <span class="tab-icon">🔍</span> DIAG Mode (d01-d70)
+      </button>
+      <button class="nav-tab" data-tab="tab-recordings" id="tab-btn-recordings">
+        <span class="tab-icon">📁</span> Log Telemetri
+      </button>
+      <button class="nav-tab" data-tab="tab-terminal" id="tab-btn-terminal">
+        <span class="tab-icon">⚡</span> Hex Terminal
+      </button>
+      <button class="nav-tab" data-tab="tab-settings" id="tab-btn-settings">
+        <span class="tab-icon">⚙️</span> Hardware & Ports
+      </button>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="content-viewport">
+
+      <!-- TAB 1: COCKPIT GAUGES -->
+      <section id="tab-cockpit" class="tab-pane active">
+        <!-- Digital Status Bar Indicator Row -->
+        <div class="bike-status-bar">
+          <div class="flag-item" id="flag-mil">
+            <span class="flag-icon">⚠️</span>
+            <span class="flag-label">CHECK ENGINE</span>
+            <span class="flag-val" id="mil-val">OFF</span>
+          </div>
+          <div class="flag-item" id="flag-neutral">
+            <span class="flag-icon">🟢</span>
+            <span class="flag-label">GIGI NETRAL</span>
+            <span class="flag-val" id="neutral-val">AKTIF</span>
+          </div>
+          <div class="flag-item" id="flag-kickstand">
+            <span class="flag-icon">🛑</span>
+            <span class="flag-label">STANDAR SAMPING</span>
+            <span class="flag-val" id="kickstand-val">NAIK</span>
+          </div>
+          <div class="flag-item" id="flag-lean">
+            <span class="flag-icon">📐</span>
+            <span class="flag-label">SENSOR MIRING</span>
+            <span class="flag-val" id="lean-val">1.40 V (AMAN)</span>
+          </div>
+          <div class="flag-item" id="flag-recording">
+            <span class="flag-icon">🔴</span>
+            <span class="flag-label">REC CSV</span>
+            <span class="flag-val" id="rec-val">STANDBY</span>
+          </div>
+        </div>
+
+        <!-- Primary Gauge Cluster Row -->
+        <div class="gauges-grid">
+          <!-- RPM & RPS Main Tachometer -->
+          <div class="glass-card gauge-card gauge-main">
+            <div class="card-header">
+              <span class="card-title">PUTARAN MESIN (TACHOMETER)</span>
+              <span class="card-tag tag-cyan">RPS &bull; RPM</span>
+            </div>
+            <div class="gauge-wrapper">
+              <canvas id="gauge-rpm" width="320" height="320"></canvas>
+              <div class="gauge-center-readout">
+                <div class="big-rpm" id="readout-rpm">0</div>
+                <div class="unit-rpm">RPM</div>
+                <div class="sub-rps"><span id="readout-rps">0.0</span> RPS (Putaran/Detik)</div>
+              </div>
+            </div>
+            <div class="gauge-footer-stats">
+              <div class="stat-col">
+                <span class="stat-lbl">IDLE TARGET</span>
+                <span class="stat-val">1,400 RPM</span>
+              </div>
+              <div class="stat-col">
+                <span class="stat-lbl">REDLINE</span>
+                <span class="stat-val text-red">9,500 RPM</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Throttle Position (TPS) Gauge -->
+          <div class="glass-card gauge-card">
+            <div class="card-header">
+              <span class="card-title">BUKAAN GAS (TPS)</span>
+              <span class="card-tag tag-amber">THROTTLE</span>
+            </div>
+            <div class="gauge-wrapper">
+              <canvas id="gauge-tps" width="240" height="240"></canvas>
+              <div class="gauge-center-readout">
+                <div class="big-val" id="readout-tps">0.0</div>
+                <div class="unit-val">%</div>
+                <div class="sub-metric"><span id="readout-tps-volt">0.65</span> V &bull; <span id="readout-tps-deg">0.0</span>°</div>
+              </div>
+            </div>
+            <div class="progress-linear-wrap">
+              <div class="progress-linear-bar" id="tps-linear-bar"></div>
+            </div>
+          </div>
+
+          <!-- Engine Temperature (ECT) Gauge -->
+          <div class="glass-card gauge-card">
+            <div class="card-header">
+              <span class="card-title">SUHU MESIN (CYL/ECT)</span>
+              <span class="card-tag tag-blue">ENGINE TEMP</span>
+            </div>
+            <div class="gauge-wrapper">
+              <canvas id="gauge-temp" width="240" height="240"></canvas>
+              <div class="gauge-center-readout">
+                <div class="big-val" id="readout-temp">0</div>
+                <div class="unit-val">°C</div>
+                <div class="sub-metric" id="temp-status">OPTIMAL</div>
+              </div>
+            </div>
+            <div class="dual-temp-stats">
+              <span>IAT (Udara Masuk): <strong id="readout-iat">0</strong> °C</span>
+            </div>
+          </div>
+
+          <!-- Battery Voltage & O2 Lambda Gauge -->
+          <div class="glass-card gauge-card">
+            <div class="card-header">
+              <span class="card-title">KELISTRIKAN & LAMBDA</span>
+              <span class="card-tag tag-green">VBAT &bull; O2</span>
+            </div>
+            <div class="gauge-wrapper">
+              <canvas id="gauge-vbat" width="240" height="240"></canvas>
+              <div class="gauge-center-readout">
+                <div class="big-val" id="readout-vbat">0.0</div>
+                <div class="unit-val">VOLT</div>
+                <div class="sub-metric" id="vbat-status">NORMAL</div>
+              </div>
+            </div>
+            <div class="lambda-meter-box">
+              <div class="lambda-header">
+                <span>AFR / O2 LAMBDA</span>
+                <span id="readout-lambda">1.00 λ</span>
+              </div>
+              <div class="lambda-bar-track">
+                <div class="lambda-bar-cursor" id="lambda-cursor"></div>
+              </div>
+              <div class="lambda-labels">
+                <span>RICH (&lt;0.8)</span>
+                <span>STOICH (1.0)</span>
+                <span>LEAN (&gt;1.2)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Telemetry Data Grid Cards -->
+        <div class="telemetry-grid">
+          <div class="telemetry-card">
+            <div class="tele-label">TEKANAN INTAKE (MAP)</div>
+            <div class="tele-value" id="val-map">0.0 <span class="tele-unit">kPa</span></div>
+            <div class="tele-bar"><div class="tele-bar-fill fill-cyan" id="bar-map"></div></div>
+          </div>
+          <div class="telemetry-card">
+            <div class="tele-label">DURASI INJEKTOR</div>
+            <div class="tele-value" id="val-inj">0.00 <span class="tele-unit">ms</span></div>
+            <div class="tele-bar"><div class="tele-bar-fill fill-amber" id="bar-inj"></div></div>
+          </div>
+          <div class="telemetry-card">
+            <div class="tele-label">DERAJAT PENGAPIAN</div>
+            <div class="tele-value" id="val-ign">0.0 <span class="tele-unit">°BTDC</span></div>
+            <div class="tele-bar"><div class="tele-bar-fill fill-red" id="bar-ign"></div></div>
+          </div>
+          <div class="telemetry-card">
+            <div class="tele-label">KATUP ISC STEP</div>
+            <div class="tele-value" id="val-isc">0 <span class="tele-unit">steps</span></div>
+            <div class="tele-bar"><div class="tele-bar-fill fill-purple" id="bar-isc"></div></div>
+          </div>
+          <div class="telemetry-card">
+            <div class="tele-label">ESTIMASI KONSUMSI BBM</div>
+            <div class="tele-value" id="val-fuel">0.00 <span class="tele-unit">L/Jam</span></div>
+            <div class="tele-bar"><div class="tele-bar-fill fill-green" id="bar-fuel"></div></div>
+          </div>
+          <div class="telemetry-card">
+            <div class="tele-label">TEKANAN UDARA (BARO)</div>
+            <div class="tele-value" id="val-baro">101.3 <span class="tele-unit">kPa</span></div>
+            <div class="tele-bar"><div class="tele-bar-fill fill-cyan" style="width: 100%;"></div></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 2: LIVE OSCILLOSCOPE -->
+      <section id="tab-oscilloscope" class="tab-pane">
+        <div class="glass-card osc-container">
+          <div class="osc-toolbar">
+            <div class="osc-title-group">
+              <h2>MULTITRACE REAL-TIME OSCILLOSCOPE</h2>
+              <span class="badge-active">TELEMETRY STREAM 20Hz</span>
+            </div>
+            <div class="osc-controls">
+              <label class="check-channel"><input type="checkbox" id="chk-trace-rpm" checked> <span class="chk-lbl color-rpm">RPM</span></label>
+              <label class="check-channel"><input type="checkbox" id="chk-trace-tps" checked> <span class="chk-lbl color-tps">TPS (%)</span></label>
+              <label class="check-channel"><input type="checkbox" id="chk-trace-map" checked> <span class="chk-lbl color-map">MAP (kPa)</span></label>
+              <label class="check-channel"><input type="checkbox" id="chk-trace-inj" checked> <span class="chk-lbl color-inj">INJ (ms)</span></label>
+
+              <button id="btn-pause-osc" class="btn btn-sm btn-outline">Pause</button>
+              <button id="btn-clear-osc" class="btn btn-sm btn-outline">Clear</button>
+              <button id="btn-record-csv" class="btn btn-sm btn-record">🔴 Rekam ke CSV</button>
+            </div>
+          </div>
+
+          <div class="canvas-chart-holder">
+            <canvas id="osc-canvas" width="1000" height="420"></canvas>
+          </div>
+
+          <div class="osc-legend-bar">
+            <div class="legend-chip"><span class="legend-dot color-rpm"></span> RPM: <strong id="cur-trace-rpm">0</strong></div>
+            <div class="legend-chip"><span class="legend-dot color-tps"></span> TPS: <strong id="cur-trace-tps">0%</strong></div>
+            <div class="legend-chip"><span class="legend-dot color-map"></span> MAP: <strong id="cur-trace-map">0 kPa</strong></div>
+            <div class="legend-chip"><span class="legend-dot color-inj"></span> Injektor: <strong id="cur-trace-inj">0 ms</strong></div>
+            <div class="legend-chip" id="rec-info-chip" style="margin-left: auto; display:none;">
+              <span class="blinking-dot"></span> Merekam: <span id="rec-samples-count">0</span> sampel
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 3: ECU MAPS & TUNING -->
+      <section id="tab-maps" class="tab-pane">
+        <div class="maps-layout">
+          <!-- Sidebar Tuning Controls -->
+          <div class="glass-card maps-sidebar">
+            <h3>PENGATURAN KALIBRASI & TUNING</h3>
+            <p class="desc-text">Ubah tabel bahan bakar, derajat pengapian, dan CO Trim secara bebas.</p>
+
+            <!-- Preset Profiles Loader -->
+            <div class="preset-box">
+              <label for="sel-preset">Pilih Preset Kalibrasi:</label>
+              <div class="input-with-button">
+                <select id="sel-preset" class="custom-select"></select>
+                <button id="btn-load-preset" class="btn btn-sm btn-outline">Muat</button>
+              </div>
+            </div>
+
+            <!-- Global Trim Adjuster -->
+            <div class="trim-box">
+              <div class="trim-title">TRIM BAHAN BAKAR GLOBAL (%):</div>
+              <div class="trim-btn-group">
+                <button class="btn btn-sm btn-outline" onclick="applyFuelTrim(-5)">-5%</button>
+                <button class="btn btn-sm btn-outline" onclick="applyFuelTrim(-1)">-1%</button>
+                <button class="btn btn-sm btn-outline" onclick="applyFuelTrim(1)">+1%</button>
+                <button class="btn btn-sm btn-outline" onclick="applyFuelTrim(5)">+5%</button>
+              </div>
+            </div>
+
+            <div class="trim-box">
+              <div class="trim-title">TRIM PENGAPIAN GLOBAL (°BTDC):</div>
+              <div class="trim-btn-group">
+                <button class="btn btn-sm btn-outline" onclick="applyIgnitionTrim(-2)">-2°</button>
+                <button class="btn btn-sm btn-outline" onclick="applyIgnitionTrim(-1)">-1°</button>
+                <button class="btn btn-sm btn-outline" onclick="applyIgnitionTrim(1)">+1°</button>
+                <button class="btn btn-sm btn-outline" onclick="applyIgnitionTrim(2)">+2°</button>
+              </div>
+            </div>
+
+            <!-- CO Adjustment Trim -->
+            <div class="co-trim-card">
+              <div class="co-header">
+                <span class="co-title">CO ADJUSTMENT TRIM</span>
+                <span class="co-badge" id="co-current-val">0</span>
+              </div>
+              <p class="co-desc">Kompensasi rasio bahan bakar idle/low throttle (-30 = Kering, +30 = Basah).</p>
+              <input type="range" id="co-slider" min="-30" max="30" step="1" value="0" class="custom-slider">
+              <div class="slider-ticks">
+                <span>-30 (Lean)</span>
+                <span>0</span>
+                <span>+30 (Rich)</span>
+              </div>
+              <button id="btn-apply-co" class="btn btn-primary btn-block">Terapkan CO ke ECU</button>
+            </div>
+
+            <div class="ecu-specs-card">
+              <h4>PARAMETER LIMITER</h4>
+              <ul class="specs-list">
+                <li><span>Hard RPM Limiter:</span> <strong id="spec-rpm-limiter">9,500 RPM</strong></li>
+                <li><span>Soft Limiter:</span> <strong>9,300 RPM</strong></li>
+                <li><span>Target Idle (Dingin):</span> <strong>1,800 RPM</strong></li>
+                <li><span>Target Idle (Panas):</span> <strong>1,400 RPM</strong></li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Main Matrix Viewer & Cell Editor -->
+          <div class="glass-card maps-main">
+            <div class="map-selector-bar">
+              <button class="btn btn-tab-map active" id="btn-view-fuel">Main Fuel Map (ms)</button>
+              <button class="btn btn-tab-map" id="btn-view-ign">Ignition Timing Map (°BTDC)</button>
+              <div class="map-view-toggle">
+                <button class="btn btn-sm btn-outline active" id="btn-mode-2d">Tabel 2D</button>
+                <button class="btn btn-sm btn-outline" id="btn-mode-3d">Visual 3D</button>
+              </div>
+            </div>
+
+            <!-- Active Operating Point Banner -->
+            <div class="live-point-banner">
+              <span>🎯 Titik Operasi Mesin:</span>
+              <span>RPM: <strong id="live-map-rpm">0</strong></span> &bull;
+              <span>TPS: <strong id="live-map-tps">0%</strong></span> &bull;
+              <span>Nilai Map: <strong id="live-map-val">0.00</strong></span>
+            </div>
+
+            <!-- Inline Cell Editor Bar -->
+            <div class="cell-editor-bar" id="cell-editor-bar">
+              <span id="cell-editor-label">Pilih sel di tabel untuk mengubah nilainya:</span>
+              <div class="cell-editor-controls">
+                <input type="number" id="cell-editor-val" step="0.1" class="custom-input-sm" disabled>
+                <button id="btn-cell-minus" class="btn btn-sm btn-outline" disabled>-0.1</button>
+                <button id="btn-cell-plus" class="btn btn-sm btn-outline" disabled>+0.1</button>
+                <button id="btn-cell-save" class="btn btn-sm btn-primary" disabled>Simpan Sel</button>
+              </div>
+            </div>
+
+            <!-- Heatmap Table Container -->
+            <div class="map-table-scroll" id="map-table-view">
+              <table class="ecu-matrix-table" id="ecu-matrix-table">
+                <!-- Populated dynamically -->
+              </table>
+            </div>
+
+            <!-- 3D Canvas View -->
+            <div class="map-3d-canvas-wrap" id="map-3d-view" style="display: none;">
+              <canvas id="canvas-3d-surface" width="800" height="420"></canvas>
+              <div class="canvas-3d-hint">Elevasi permukaan 3D matriks pemetaan ECU.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 4: DIAGNOSTIC & DTC -->
+      <section id="tab-dtc" class="tab-pane">
+        <div class="dtc-header-card glass-card">
+          <div class="dtc-header-left">
+            <h2>PUSAT DIAGNOSA & KODE KERUSAKAN (DTC)</h2>
+            <p>Membaca Malfunction Indicator Light (MIL) dan memori kerusakan EEPROM Yamaha Mio GT.</p>
+          </div>
+          <div class="dtc-actions">
+            <button id="btn-refresh-dtc" class="btn btn-outline">🔄 Pindai Ulang DTC</button>
+            <button id="btn-clear-dtc" class="btn btn-danger">🗑️ Hapus Semua DTC</button>
+          </div>
+        </div>
+
+        <div class="dtc-columns">
+          <!-- Active DTC -->
+          <div class="glass-card dtc-column-card">
+            <div class="card-col-header">
+              <h3>KODE KERUSAKAN AKTIF (MALFUNCTION AKTIF)</h3>
+              <span class="badge-count badge-red" id="active-dtc-count">0</span>
+            </div>
+            <div class="dtc-list" id="active-dtc-list">
+              <div class="empty-state">Memuat data kerusakan aktif...</div>
+            </div>
+          </div>
+
+          <!-- History DTC -->
+          <div class="glass-card dtc-column-card">
+            <div class="card-col-header">
+              <h3>RIWAYAT KERUSAKAN (EEPROM HISTORY)</h3>
+              <span class="badge-count badge-amber" id="history-dtc-count">0</span>
+            </div>
+            <div class="dtc-list" id="history-dtc-list">
+              <div class="empty-state">Memuat data riwayat kerusakan...</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Actuator Output Testing -->
+        <div class="glass-card actuator-card" style="margin-top: 14px;">
+          <h3>PENGUJIAN AKTIF AKTUATOR (ACTUATOR OUTPUT TEST)</h3>
+          <p class="desc-text">Perintahkan ECU untuk menguji komponen kelistrikan secara langsung tanpa menyalakan mesin.</p>
+          <div class="actuator-grid">
+            <div class="actuator-item">
+              <div>
+                <strong>Uji Koil Busi / Percikan Api (d30)</strong>
+                <p>Memicu percikan busi sebanyak 5 kali untuk memastikan koil pengapian normal.</p>
+              </div>
+              <button class="btn btn-outline" onclick="triggerActuator(30)">Uji Koil Busi</button>
+            </div>
+            <div class="actuator-item">
+              <div>
+                <strong>Uji Semprotan Injektor (d36)</strong>
+                <p>Memicu semprotan klik injektor sebanyak 5 kali untuk pengujian aliran bahan bakar.</p>
+              </div>
+              <button class="btn btn-outline" onclick="triggerActuator(36)">Uji Injektor</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 5: DIAG MODE (d01 - d70) -->
+      <section id="tab-diag" class="tab-pane">
+        <div class="glass-card diag-container">
+          <div class="diag-header-row">
+            <div>
+              <h2>DIAGNOSTIC MODE INSPECTOR (d01 s/d d70)</h2>
+              <p>Inspeksi parameter sensor individual langsung dari rutin diagnostic ECU Yamaha.</p>
+            </div>
+            <button id="btn-refresh-diag" class="btn btn-outline">🔄 Baca Semua Sensor</button>
+          </div>
+
+          <div class="diag-grid" id="diag-items-grid">
+            <div class="empty-state">Klik 'Baca Semua Sensor' atau tunggu pemindaian awal...</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 6: LOG TELEMETRI & ANALISIS -->
+      <section id="tab-recordings" class="tab-pane">
+        <div class="glass-card recordings-container">
+          <div class="diag-header-row">
+            <div>
+              <h2>MANAJER LOG TELEMETRI & ANALISIS</h2>
+              <p>Daftar seluruh rekaman data telemetri yang telah disimpan. Unduh CSV atau buat grafik analisis Matplotlib.</p>
+            </div>
+            <button id="btn-refresh-recordings" class="btn btn-outline">🔄 Perbarui Daftar</button>
+          </div>
+
+          <div class="recordings-table-wrap">
+            <table class="recordings-table" id="recordings-table">
+              <thead>
+                <tr>
+                  <th>Nama File Log</th>
+                  <th>Waktu Rekaman</th>
+                  <th>Jumlah Sampel</th>
+                  <th>Ukuran</th>
+                  <th>Aksi Unduh & Analisis</th>
+                </tr>
+              </thead>
+              <tbody id="recordings-tbody">
+                <tr><td colspan="5" class="empty-state">Memuat daftar file rekaman...</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Matplotlib Graph Preview Container -->
+          <div id="plot-preview-container" class="plot-preview-box" style="display: none;">
+            <div class="plot-preview-header">
+              <h3 id="plot-preview-title">Grafik Analisis Telemetri:</h3>
+              <button class="btn btn-sm btn-outline" onclick="closePlotPreview()">Tutup</button>
+            </div>
+            <img id="plot-preview-img" src="" alt="Plot Analisis" class="plot-img">
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 7: HEX TERMINAL (RAW Y-DIS COMMAND CONSOLE) -->
+      <section id="tab-terminal" class="tab-pane">
+        <div class="glass-card terminal-container">
+          <h2>TERMINAL PAKET HEX PROTOKOL Y-DIS</h2>
+          <p class="desc-text">Kirim perintah paket raw hex langsung ke bus K-Line ECU dan lihat frame balasan secara real-time.</p>
+
+          <div class="quick-commands-bar">
+            <span>Perintah Cepat:</span>
+            <button class="btn btn-sm btn-outline" onclick="sendQuickHex('81')">Fast Init (81)</button>
+            <button class="btn btn-sm btn-outline" onclick="sendQuickHex('21')">Live Data (21)</button>
+            <button class="btn btn-sm btn-outline" onclick="sendQuickHex('13')">Read DTC (13)</button>
+            <button class="btn btn-sm btn-outline" onclick="sendQuickHex('14')">Clear DTC (14)</button>
+            <button class="btn btn-sm btn-outline" onclick="sendQuickHex('23')">Read Calib (23)</button>
+          </div>
+
+          <div class="terminal-input-row">
+            <input type="text" id="raw-hex-input" class="custom-input" placeholder="Masukkan hex (contoh: 21 atau 12 02 21 35)">
+            <button id="btn-send-raw-hex" class="btn btn-primary">Kirim Paket</button>
+          </div>
+
+          <div class="terminal-log-box" id="terminal-log-box">
+            <div class="terminal-log-entry info">[SYSTEM] Terminal K-Line siap. Masukkan perintah hex di atas.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 8: HARDWARE & SETTINGS -->
+      <section id="tab-settings" class="tab-pane">
+        <div class="glass-card settings-card">
+          <h2>KONFIGURASI PERANGKAT KERAS & PORT K-LINE</h2>
+          <p class="desc-text">Pilih koneksi kabel diagnostik fisik USB K-Line (FTDI/CH340/VAG-COM) atau simulator virtual.</p>
+
+          <div class="settings-form">
+            <div class="form-group">
+              <label for="sel-connection-mode">Mode Koneksi:</label>
+              <select id="sel-connection-mode" class="custom-select">
+                <option value="mock">Virtual Simulator (Mock Yamaha Mio GT ECU)</option>
+                <option value="serial">Fisik USB K-Line Serial Adapter</option>
+              </select>
+            </div>
+
+            <div class="form-group" id="group-serial-port">
+              <label for="sel-serial-port">Serial COM Port:</label>
+              <div class="input-with-button">
+                <select id="sel-serial-port" class="custom-select"></select>
+                <button id="btn-scan-ports" class="btn btn-sm btn-outline">Pindai Port</button>
+              </div>
+            </div>
+
+            <div class="form-group" id="group-baudrate">
+              <label for="sel-baudrate">Baud Rate Y-DIS:</label>
+              <select id="sel-baudrate" class="custom-select">
+                <option value="10400" selected>10,400 bps (Standar ISO 14230 Yamaha)</option>
+                <option value="9600">9,600 bps</option>
+                <option value="19200">19,200 bps</option>
+              </select>
+            </div>
+
+            <div class="form-actions">
+              <button id="btn-apply-connection" class="btn btn-primary">Terapkan & Hubungkan Ulang</button>
+            </div>
+          </div>
+
+          <div class="pinout-reminder">
+            <h3>Informasi Pinout Soket Diagnostik DLC Yamaha Mio GT:</h3>
+            <p>Pin 1: Merah/Coklat (+12V Aki) &bull; Pin 2: Hitam (GND) &bull; Pin 3: Kuning/Garis Hitam (K-Line)</p>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Footer Status Bar -->
+    <footer class="app-footer">
+      <div class="footer-left">
+        <span>Software Package: <strong>Yamaha ECU Toolkit v1.1.0</strong></span>
+        <span>Target: <strong>Mio GT 115 YMJET-FI (54P)</strong></span>
+      </div>
+      <div class="footer-right">
+        <span id="footer-packet-info">Paket: 0 diterima</span> &bull;
+        <span id="footer-time-info">Waktu: --:--:--</span>
+      </div>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

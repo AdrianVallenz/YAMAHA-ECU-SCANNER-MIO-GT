@@ -161,6 +161,27 @@ def cmd_export_map(args: argparse.Namespace) -> None:
         print(f"[v] Berhasil mengekspor profil mapping ke file: {out_json}")
 
 
+def cmd_web(args: argparse.Namespace) -> None:
+    from .web.server import start_web_server
+    start_web_server(
+        port=args.web_port,
+        mock=args.mock,
+        serial_port=args.port,
+        baudrate=args.baud,
+        open_browser=not args.no_browser,
+    )
+
+
+def cmd_plot(args: argparse.Namespace) -> None:
+    from .plotter import plot_telemetry_csv, plot_ecu_maps
+    if args.file:
+        out = plot_telemetry_csv(args.file, save_image_path=args.output, show_plot=args.show)
+        print(f"[v] Grafik analisis telemetri berhasil disimpan: {out}")
+    else:
+        out = plot_ecu_maps(save_image_path=args.output, show_plot=args.show)
+        print(f"[v] Visualisasi peta matriks ECU berhasil disimpan: {out}")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Framework Diagnosa, Live Telemetri (RPS), dan Mapping ECU Yamaha Mio GT 2015"
@@ -195,6 +216,17 @@ def main() -> None:
     p_exp = subparsers.add_parser("export-map", help="Ekspor tabel mapping ke format file JSON")
     p_exp.add_argument("--output", default="yamaha_mio_gt_map.json", help="Nama file tujuan ekspor")
 
+    # Web Dashboard command
+    p_web = subparsers.add_parser("web", help="Buka dashboard visual interaktif berbasis web (Browser)")
+    p_web.add_argument("--web-port", type=int, default=8000, help="Port server HTTP (default: 8000)")
+    p_web.add_argument("--no-browser", action="store_true", help="Jangan buka browser secara otomatis")
+
+    # Plot offline command
+    p_plot = subparsers.add_parser("plot", help="Buat grafik visual data telemetri CSV atau peta ECU")
+    p_plot.add_argument("--file", type=str, default=None, help="Path ke file log CSV telemetri")
+    p_plot.add_argument("--output", type=str, default=None, help="Path file output gambar PNG")
+    p_plot.add_argument("--show", action="store_true", help="Tampilkan jendela plot interaktif")
+
     args = parser.parse_args()
 
     if not args.command:
@@ -209,6 +241,8 @@ def main() -> None:
         "mapping": cmd_view_mapping,
         "set-co": cmd_set_co,
         "export-map": cmd_export_map,
+        "web": cmd_web,
+        "plot": cmd_plot,
     }
 
     handler = dispatch.get(args.command)

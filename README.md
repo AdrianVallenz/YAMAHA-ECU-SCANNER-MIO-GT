@@ -37,6 +37,7 @@ Secara khusus ditargetkan dan dioptimalkan untuk **Yamaha Mio GT 115cc YMJET-FI 
 ## 📁 Struktur Direktori & Baris Kode Framework
 
 ```text
+visual_dashboard.py              # Launcher cepat Web Dashboard visual interaktif
 yamaha_ecu/
 ├── __init__.py                  # Root package exports
 ├── core/
@@ -63,6 +64,14 @@ yamaha_ecu/
 │   ├── diagnostic.py            # Layanan diagnosa DTC & inspeksi DIAG d01-d70
 │   ├── live_data.py             # Layanan streaming RPS & perekaman log telemetri
 │   └── mapping.py               # Layanan kalibrasi CO trim & modifikasi tabel mapping
+├── web/
+│   ├── __init__.py
+│   ├── server.py                # Server HTTP Threading & SSE streaming 20Hz
+│   └── static/                  # Antarmuka Single-Page App (SPA)
+│       ├── index.html           # Layout visual cockpit motorsport & tab switcher
+│       ├── style.css            # Dark motorsport UI, glassmorphism, neon HUD
+│       └── app.js               # Canvas radial gauges, oscilloscope, 3D surface
+├── plotter.py                   # Modul visualisasi grafik telemetri CSV & peta (Matplotlib)
 ├── firmware/
 │   └── kline_bridge.ino         # Sketch firmware Arduino Nano/ESP32 untuk adapter K-Line
 ├── cli.py                       # Antarmuka baris perintah (CLI) serbaguna
@@ -141,6 +150,8 @@ with YamahaECUClient(port="COM3", baudrate=10400) as ecu:
     print(f"Derajat Pengapian   : {data.ignition_advance_deg} °BTDC")
 ```
 
+```
+
 ### 3. Membaca dan Menyetel Kalibrasi Mapping (CO Trim & Tabel 3D)
 ```python
 from yamaha_ecu import YamahaECUClient
@@ -164,6 +175,27 @@ with YamahaECUClient(port="COM3", baudrate=10400) as ecu:
 
 ---
 
+## 📦 Instalasi Sebagai Paket Software Mandiri
+
+Framework ini telah dikonfigurasi sebagai paket software Python standar (`pyproject.toml` dan `setup.py`):
+
+```bash
+# 1. Clone repository atau buka folder proyek:
+cd "d:\Project\Yamaha ECU R,D,T"
+
+# 2. Install paket dalam mode editable:
+pip install -e .
+
+# 3. Setelah instalasi selesai, perintah console berikut langsung dapat digunakan di terminal mana saja:
+yamaha-ecu-studio      # Membuka Web Studio Visual & Telemetry Tuner
+yamaha-ecu --help      # Perintah CLI lengkap (diagnosa, telemetri, mapping)
+yamaha-ecu-app --mock  # Terminal HUD Dashboard berbasis teks
+```
+
+Untuk pengguna Windows, Anda juga dapat langsung mengklik dua kali file **`run_studio.bat`** untuk meluncurkan studio diagnostik dan tuning secara instan.
+
+---
+
 ## 🖥️ Menggunakan Antarmuka Baris Perintah (CLI)
 
 Framework ini dilengkapi antarmuka CLI siap pakai tanpa perlu menulis kode tambahan:
@@ -171,41 +203,78 @@ Framework ini dilengkapi antarmuka CLI siap pakai tanpa perlu menulis kode tamba
 ### Menjalankan dengan Motor Fisik (Kabel USB K-Line di Port COM):
 ```bash
 # Membaca kode kerusakan DTC
-python -m yamaha_ecu.cli --port COM3 dtc
+yamaha-ecu --port COM3 dtc
 
 # Menghapus riwayat kerusakan ECU
-python -m yamaha_ecu.cli --port COM3 clear-dtc
+yamaha-ecu --port COM3 clear-dtc
 
 # Streaming putaran mesin RPS & sensor setiap 100ms
-python -m yamaha_ecu.cli --port COM3 rps --interval 100
+yamaha-ecu --port COM3 rps --interval 100
 
 # Inspeksi sensor DIAG Mode (d01 - d70)
-python -m yamaha_ecu.cli --port COM3 diag
+yamaha-ecu --port COM3 diag
 
 # Melihat tabel kalibrasi mapping bahan bakar & pengapian
-python -m yamaha_ecu.cli --port COM3 mapping
+yamaha-ecu --port COM3 mapping
 
 # Mengubah setelan CO trim menjadi +2
-python -m yamaha_ecu.cli --port COM3 set-co 2
+yamaha-ecu --port COM3 set-co 2
 ```
 
 ### Menjalankan dalam Mode Simulator (Tanpa Motor Fisik / Menggunakan Mock):
 Cukup tambahkan flag `--mock`:
 ```bash
 # Baca DTC di mode simulasi
-python -m yamaha_ecu.cli --mock dtc
+yamaha-ecu --mock dtc
 
 # Streaming RPM / RPS di mode simulasi
-python -m yamaha_ecu.cli --mock rps
+yamaha-ecu --mock rps
 
 # Tampilkan tabel matriks mapping di mode simulasi
-python -m yamaha_ecu.cli --mock mapping
+yamaha-ecu --mock mapping
 ```
 
-### Menjalankan Dashboard Visual Interaktif di Terminal:
+---
+
+## 🏎️ Yamaha ECU Studio (Web Visual Dashboard & Tuning Suite)
+
+Tampilan antarmuka visual berbasis web modern dengan desain **minimalis matte dark high-contrast (bebas efek glowing neon)**:
+
+### 1. Akses Seluruh Data ECU & Telemetri Real-Time
+- **Cockpit Gauges**: Radial Tachometer RPM & RPS (0-10,000 RPM) dengan redline, TPS Bukaan Gas %, Suhu Mesin ECT °C & IAT, Voltase Aki VBAT, O2 Lambda meter, dan sensor status.
+- **Multitrace Real-Time Oscilloscope**: Grafik gelombang telemetri langsung (RPM, TPS, MAP, Injektor ms) 20Hz dengan tombol Pause dan Clear.
+- **Inspeksi DIAG Mode (d01 s/d d70)**: Pemantauan nilai sensor secara granular (bukaan TPS, kevakuman MAP, suhu ECT, switch standar samping, voltase aki, dll).
+- **Pusat DTC & Malfungsi**: Indikator lampu MIL, status kode kerusakan aktif dan riwayat EEPROM beserta deskripsi lengkap dalam bahasa Indonesia dan tombol reset DTC.
+
+### 2. Modifikasi & Tuning Parameter ECU
+- **Peta Kalibrasi 3D & 2D Matrix (Fuel & Ignition)**:
+  - Visualisasi interaktif tabel *Main Fuel Map* (TPS vs RPM -> Pulse Width ms) dan *Base Ignition Timing* (TPS vs RPM -> Derajat °BTDC).
+  - Indikator sel aktif (2px high-contrast outline) yang bergerak real-time mengikuti putaran RPM dan bukaan gas throttle.
+  - **Interactive Cell Editor**: Klik sel matriks mana saja untuk mengubah nilainya secara langsung per sel.
+  - **Bulk Trim Buttons**: Tambah/kurang bahan bakar secara massal (+2%, -2%, +5%, -5%) atau geser derajat pengapian (+1°, -1°).
+- **Preset Kalibrasi Siap Pakai**:
+  - `stock_mio_gt.json` (OEM Pabrik 54P)
+  - `eco_mode.json` (Cruising lebih irit & advance timing responsif)
+  - `racing_exhaust.json` (Pengayaan bahan bakar +6% untuk knalpot free flow)
+  - `boreup_130cc.json` (Durasi injeksi +14%, limiter ditingkatkan ke 10,200 RPM)
+- **CO Adjustment Trim**: Slider penyesuaian bahan bakar global (-30 s/d +30).
+- **Actuator Output Test**: Uji aktif fisik untuk koil pengapian (d30 - 5x spark) dan injektor bahan bakar (d36 - 5x pulse).
+- **Terminal Raw Y-DIS Hex**: Pengiriman dan pengetesan opcode heksadesimal langsung ke ECU dengan log inspeksi respon.
+
+### 3. Perekaman & Penyimpanan Data Telemetri Lengkap
+- **Tombol Rekam CSV Langsung**: Mulai/hentikan perekaman live streaming dari bilah atas atau tab telemetri.
+- **Manajer Sesi Log Telemetri**: Tabel daftar seluruh file rekaman log telemetri CSV dengan ukuran file, timestamp, dan tombol unduh langsung (*Download CSV*).
+- **1-Click Matplotlib Plot Generator**: Tombol "Plot Grafik" pada setiap rekaman untuk merender 4-panel grafik diagnostik resolusi tinggi langsung di browser.
+
+### Cara Menjalankan Studio:
 ```bash
-python -m yamaha_ecu.app --mock
-# Atau dengan kabel fisik:
-# python -m yamaha_ecu.app --port COM3
+# Menggunakan batch file Windows (1-klik):
+run_studio.bat
+
+# Atau via python script:
+python visual_dashboard.py
+
+# Atau via command package:
+yamaha-ecu-studio
 ```
-Dashboard ini akan menampilkan speedometer bar/gauge putaran mesin real-time (RPM & RPS), bukaan throttle gas, suhu mesin, voltase aki, dan status indikator kerusakan sistem FI secara responsif.
+Dashboard akan otomatis terbuka di browser pada alamat **`http://localhost:8000`**.

@@ -92,7 +92,19 @@ def main():
     parser.add_argument("--baud", type=int, default=10400, help="Baud rate")
     parser.add_argument("--mock", action="store_true", help="Gunakan mock simulator")
     parser.add_argument("--hz", type=float, default=8.0, help="Refresh rate (Hz)")
+    parser.add_argument("--web", action="store_true", help="Jalankan antarmuka grafis Web Visual Dashboard (Browser)")
+    parser.add_argument("--web-port", type=int, default=8000, help="Port Web Visual Dashboard (default: 8000)")
     args = parser.parse_args()
+
+    if args.web:
+        from .web.server import start_web_server
+        start_web_server(
+            port=args.web_port,
+            mock=args.mock,
+            serial_port=args.port,
+            baudrate=args.baud,
+        )
+        return
 
     adapter = MockKLineAdapter() if args.mock else SerialKLineAdapter(port=args.port, baudrate=args.baud)
     client = YamahaECUClient(hardware=adapter)

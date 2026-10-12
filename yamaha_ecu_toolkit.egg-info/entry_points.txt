@@ -1,0 +1,4 @@
+[console_scripts]
+yamaha-ecu = yamaha_ecu.cli:main
+yamaha-ecu-app = yamaha_ecu.app:main
+yamaha-ecu-studio = visual_dashboard:main

@@ -1,0 +1,294 @@
+Metadata-Version: 2.4
+Name: yamaha-ecu-toolkit
+Version: 1.1.0
+Summary: Full ECU Diagnostic, Real-Time RPS Telemetry & Tuning Software Suite for Yamaha Motorcycle (Mio GT 2015 115cc YMJET-FI)
+Home-page: https://github.com/AdrianVallenz/YAMAHA-ECU-SCANNER-MIO-GT
+Author: Adrian Vallenz
+Keywords: yamaha,ecu,diagnostic,k-line,ydis,telemetry,tuning,obd
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+Requires-Dist: pyserial>=3.5
+Requires-Dist: matplotlib>=3.5.0
+Dynamic: home-page
+Dynamic: requires-python
+
+# Yamaha ECU Diagnostic, RPS & Mapping Framework (Yamaha Mio GT 2015)
+
+Framework Python modular dan terstruktur untuk berkomunikasi langsung dengan Electronic Control Unit (ECU) sepeda motor injeksi Yamaha melalui protokol **Yamaha Diagnostic System (Y-DIS) via K-Line (ISO 14230 / KWP2000)**.
+
+Secara khusus ditargetkan dan dioptimalkan untuk **Yamaha Mio GT 115cc YMJET-FI (Tahun 2013-2015)** dengan kode ECU **54P-H591A-00 / 2BJ-H591A-00**.
+
+---
+
+## 🚀 Fitur Utama Framework
+
+1. **Diagnostic Service (Diagnosa Kerusakan Mesin & Sensor)**:
+   - Membaca kode kerusakan **DTC Aktif** dan **DTC Riwayat** lengkap dengan nama sensor, deskripsi teknis, gejala motor, dan kemungkinan penyebab dalam bahasa Indonesia.
+   - Menghapus riwayat memori kerusakan pada EEPROM ECU (`clear_dtc`).
+   - Melakukan inspeksi parameter sensor individual melalui **DIAG Mode (d01 s/d d70)**: bukaan TPS (d01), kevakuman MAP (d03), suhu mesin ECT (d05), sensor kemiringan (d08), voltase aki (d09), dll.
+   - Uji aktif aktuator (*Actuator Output Test*): pengujian percikan koil busi (d30) dan semprotan injektor (d36).
+
+2. **RPS & Live Telemetry Streaming (Putaran Mesin & Sensor Real-time)**:
+   - Membaca putaran mesin dalam satuan **RPM** dan **RPS (Revolutions Per Second = RPM / 60)** secara presisi.
+   - Menangkap seluruh parameter mesin secara simultan: bukaan katup gas (TPS %), suhu mesin (°C), suhu intake IAT (°C), tekanan manifold MAP (kPa), tegangan baterai/aki (V), tegangan sensor O2 (Lambda), durasi injeksi bahan bakar (*Pulse Width* ms), dan derajat pengapian (*Ignition Advance* °BTDC).
+   - Mendukung streaming berkecepatan tinggi dengan *callback asynchronous* dan pencatatan telemetri langsung ke format file **CSV**.
+
+3. **ECU Mapping & Calibration Service**:
+   - Membaca dan mengatur nilai **CO Adjustment Trim (-30 s/d +30)** untuk kompensasi bahan bakar basah/kering.
+   - Membaca konfigurasi **RPM Limiter** dan target stasioner (*Idle Target*).
+   - Ekstraksi, manipulasi, dan visualisasi tabel matriks 3D:
+     - **Main Fuel Injection Map** (TPS % vs RPM -> Durasi Injeksi ms)
+     - **Ignition Timing Map** (TPS % vs RPM -> Derajat Pengapian °BTDC)
+   - Ekspor dan impor data mapping ke format **JSON** dan spreadsheet **CSV**.
+
+4. **Hardware Abstraction Layer (HAL) & Virtual Simulator**:
+   - Mendukung kabel diagnostik USB K-Line fisik (FTDI FT232R, VAG-COM KKL 409.1, CH340) dengan penanganan *echo cancellation*.
+   - Dilengkapi **Mock Adapter (Virtual ECU Emulator)** untuk mencoba dan menguji kode tanpa perlu terhubung ke motor fisik.
+   - Disertai firmware Arduino/ESP32 bridge untuk membuat modul konverter K-Line sendiri secara murah (*DIY*).
+
+---
+
+## 📁 Struktur Direktori & Baris Kode Framework
+
+```text
+visual_dashboard.py              # Launcher cepat Web Dashboard visual interaktif
+yamaha_ecu/
+├── __init__.py                  # Root package exports
+├── core/
+│   ├── __init__.py
+│   ├── ecu_client.py            # Client utama (Unified API & Context Manager)
+│   └── exceptions.py           # Exception kustom (K-Line, Checksum, Timeout)
+├── hardware/
+│   ├── __init__.py
+│   ├── interface.py             # Interface abstrak KLineInterface
+│   ├── serial_kline.py          # Driver Serial Port fisik & Echo Cancellation
+│   └── mock_adapter.py          # Simulator Virtual ECU Mio GT untuk testing
+├── protocol/
+│   ├── __init__.py
+│   ├── constants.py             # Definisi Header Y-DIS, PID, dan Kode Diagnosa
+│   ├── packet.py                # Framing paket, serialisasi & kalkulasi Checksum 8-bit
+│   └── ydis.py                  # Driver transaksi protokol Y-DIS & Fast-Init sequence
+├── models/
+│   ├── __init__.py
+│   ├── dtc.py                   # Model & kamus kode kerusakan DTC Yamaha Mio GT
+│   ├── sensor_data.py           # Dataclass telemetri sensor & konversi RPS
+│   └── map_tables.py            # Model tabel 2D & matriks 3D Fuel/Ignition Maps
+├── services/
+│   ├── __init__.py
+│   ├── diagnostic.py            # Layanan diagnosa DTC & inspeksi DIAG d01-d70
+│   ├── live_data.py             # Layanan streaming RPS & perekaman log telemetri
+│   └── mapping.py               # Layanan kalibrasi CO trim & modifikasi tabel mapping
+├── web/
+│   ├── __init__.py
+│   ├── server.py                # Server HTTP Threading & SSE streaming 20Hz
+│   └── static/                  # Antarmuka Single-Page App (SPA)
+│       ├── index.html           # Layout visual cockpit motorsport & tab switcher
+│       ├── style.css            # Dark motorsport UI, glassmorphism, neon HUD
+│       └── app.js               # Canvas radial gauges, oscilloscope, 3D surface
+├── plotter.py                   # Modul visualisasi grafik telemetri CSV & peta (Matplotlib)
+├── firmware/
+│   └── kline_bridge.ino         # Sketch firmware Arduino Nano/ESP32 untuk adapter K-Line
+├── cli.py                       # Antarmuka baris perintah (CLI) serbaguna
+└── app.py                       # Terminal Dashboard visual interaktif dengan gauge bar
+```
+
+---
+
+## 🔌 Pinout Soket Diagnostik (DLC) Yamaha Mio GT 2015
+
+Soket diagnostik (*Data Link Connector*) pada Yamaha Mio GT 2015 terletak di dekat aki (di bawah bagasi/jok motor), berbentuk soket putih 3-pin:
+
+```text
+       [  KUNCI SOKET  ]
+      +-----------------+
+      |  (1)  (2)  (3)  |
+      +-----------------+
+```
+
+| Pin | Warna Kabel Asli Motor | Fungsi | Hubungkan Ke Adapter |
+|---|---|---|---|
+| **Pin 1** | Merah / Coklat | +12V DC (Aki/Kontak) | Pin 12V VCC Transceiver (L9637D / MC33660) |
+| **Pin 2** | Hitam | Ground (GND Mesin) | Pin Ground (GND Adapter & USB PC) |
+| **Pin 3** | Kuning/Garis Hitam | **K-Line (Signal Data)** | **Pin K-Line Transceiver** |
+
+> **Catatan Penting**: K-Line menggunakan tegangan sinyal bus 12V *open-collector* dengan *pull-up resistor*. Jangan pernah menghubungkan kabel K-Line motor langsung ke pin RX/TX 5V/3.3V laptop tanpa IC transceiver (*L9637D* atau *MC33660*), karena dapat merusak port komputer atau ECU!
+
+---
+
+## 🛠️ Instalasi & Kebutuhan Sistem
+
+1. Pastikan Python 3.8+ telah terpasang di komputer Anda.
+2. Pasang dependensi serial:
+```bash
+pip install pyserial
+```
+
+---
+
+## 💻 Contoh Penggunaan dalam Kode Python
+
+### 1. Membaca Kode Kerusakan Mesin (DTC)
+```python
+from yamaha_ecu import YamahaECUClient, SerialKLineAdapter
+
+# Gunakan SerialKLineAdapter untuk kabel fisik, atau gunakan parameter use_mock=True untuk simulasi
+adapter = SerialKLineAdapter(port="COM3", baudrate=10400)
+
+with YamahaECUClient(hardware=adapter) as ecu:
+    active_dtcs, history_dtcs = ecu.diagnostic.read_dtc()
+
+    print(f"Kerusakan Aktif: {len(active_dtcs)}")
+    for fault in active_dtcs:
+        print(f" -> [Kode {fault.code}] {fault.name}")
+        print(f"    Gejala: {fault.symptoms}")
+        print(f"    Solusi: {fault.probable_cause}")
+
+    # Menghapus kode kerusakan di memori EEPROM
+    # ecu.diagnostic.clear_dtc()
+```
+
+### 2. Membaca Putaran Mesin (RPS & RPM) serta Telemetri Sensor
+```python
+from yamaha_ecu import YamahaECUClient
+
+with YamahaECUClient(port="COM3", baudrate=10400) as ecu:
+    # Membaca 1 snapshot live data
+    data = ecu.live_data.read_snapshot()
+
+    print(f"Putaran Mesin (RPM) : {data.engine_speed_rpm} RPM")
+    print(f"Frekuensi Mesin (RPS): {data.engine_speed_rps} RPS")
+    print(f"Bukaan Gas (TPS)    : {data.throttle_position_pct}% ({data.throttle_voltage_v} V)")
+    print(f"Suhu Mesin          : {data.engine_temp_c} °C")
+    print(f"Tegangan Aki        : {data.battery_voltage_v} V")
+    print(f"Durasi Injeksi      : {data.injector_pulse_width_ms} ms")
+    print(f"Derajat Pengapian   : {data.ignition_advance_deg} °BTDC")
+```
+
+```
+
+### 3. Membaca dan Menyetel Kalibrasi Mapping (CO Trim & Tabel 3D)
+```python
+from yamaha_ecu import YamahaECUClient
+
+with YamahaECUClient(port="COM3", baudrate=10400) as ecu:
+    # 1. Baca setelan CO saat ini
+    current_co = ecu.mapping.read_co_trim()
+    print(f"Nilai CO saat ini: {current_co}")
+
+    # 2. Kalibrasi CO (misal: dibuat lebih basah +3 untuk knalpot racing)
+    ecu.mapping.set_co_trim(3)
+    print("Nilai CO berhasil diubah ke +3")
+
+    # 3. Baca RPM Limiter
+    limiter = ecu.mapping.read_rpm_limiter()
+    print(f"Batas RPM Mesin (Hard Limiter): {limiter} RPM")
+
+    # 4. Ekspor seluruh tabel profil mapping ke JSON
+    ecu.mapping.export_profile_to_json("mio_gt_mapping.json")
+```
+
+---
+
+## 📦 Instalasi Sebagai Paket Software Mandiri
+
+Framework ini telah dikonfigurasi sebagai paket software Python standar (`pyproject.toml` dan `setup.py`):
+
+```bash
+# 1. Clone repository atau buka folder proyek:
+cd "d:\Project\Yamaha ECU R,D,T"
+
+# 2. Install paket dalam mode editable:
+pip install -e .
+
+# 3. Setelah instalasi selesai, perintah console berikut langsung dapat digunakan di terminal mana saja:
+yamaha-ecu-studio      # Membuka Web Studio Visual & Telemetry Tuner
+yamaha-ecu --help      # Perintah CLI lengkap (diagnosa, telemetri, mapping)
+yamaha-ecu-app --mock  # Terminal HUD Dashboard berbasis teks
+```
+
+Untuk pengguna Windows, Anda juga dapat langsung mengklik dua kali file **`run_studio.bat`** untuk meluncurkan studio diagnostik dan tuning secara instan.
+
+---
+
+## 🖥️ Menggunakan Antarmuka Baris Perintah (CLI)
+
+Framework ini dilengkapi antarmuka CLI siap pakai tanpa perlu menulis kode tambahan:
+
+### Menjalankan dengan Motor Fisik (Kabel USB K-Line di Port COM):
+```bash
+# Membaca kode kerusakan DTC
+yamaha-ecu --port COM3 dtc
+
+# Menghapus riwayat kerusakan ECU
+yamaha-ecu --port COM3 clear-dtc
+
+# Streaming putaran mesin RPS & sensor setiap 100ms
+yamaha-ecu --port COM3 rps --interval 100
+
+# Inspeksi sensor DIAG Mode (d01 - d70)
+yamaha-ecu --port COM3 diag
+
+# Melihat tabel kalibrasi mapping bahan bakar & pengapian
+yamaha-ecu --port COM3 mapping
+
+# Mengubah setelan CO trim menjadi +2
+yamaha-ecu --port COM3 set-co 2
+```
+
+### Menjalankan dalam Mode Simulator (Tanpa Motor Fisik / Menggunakan Mock):
+Cukup tambahkan flag `--mock`:
+```bash
+# Baca DTC di mode simulasi
+yamaha-ecu --mock dtc
+
+# Streaming RPM / RPS di mode simulasi
+yamaha-ecu --mock rps
+
+# Tampilkan tabel matriks mapping di mode simulasi
+yamaha-ecu --mock mapping
+```
+
+---
+
+## 🏎️ Yamaha ECU Studio (Web Visual Dashboard & Tuning Suite)
+
+Tampilan antarmuka visual berbasis web modern dengan desain **minimalis matte dark high-contrast (bebas efek glowing neon)**:
+
+### 1. Akses Seluruh Data ECU & Telemetri Real-Time
+- **Cockpit Gauges**: Radial Tachometer RPM & RPS (0-10,000 RPM) dengan redline, TPS Bukaan Gas %, Suhu Mesin ECT °C & IAT, Voltase Aki VBAT, O2 Lambda meter, dan sensor status.
+- **Multitrace Real-Time Oscilloscope**: Grafik gelombang telemetri langsung (RPM, TPS, MAP, Injektor ms) 20Hz dengan tombol Pause dan Clear.
+- **Inspeksi DIAG Mode (d01 s/d d70)**: Pemantauan nilai sensor secara granular (bukaan TPS, kevakuman MAP, suhu ECT, switch standar samping, voltase aki, dll).
+- **Pusat DTC & Malfungsi**: Indikator lampu MIL, status kode kerusakan aktif dan riwayat EEPROM beserta deskripsi lengkap dalam bahasa Indonesia dan tombol reset DTC.
+
+### 2. Modifikasi & Tuning Parameter ECU
+- **Peta Kalibrasi 3D & 2D Matrix (Fuel & Ignition)**:
+  - Visualisasi interaktif tabel *Main Fuel Map* (TPS vs RPM -> Pulse Width ms) dan *Base Ignition Timing* (TPS vs RPM -> Derajat °BTDC).
+  - Indikator sel aktif (2px high-contrast outline) yang bergerak real-time mengikuti putaran RPM dan bukaan gas throttle.
+  - **Interactive Cell Editor**: Klik sel matriks mana saja untuk mengubah nilainya secara langsung per sel.
+  - **Bulk Trim Buttons**: Tambah/kurang bahan bakar secara massal (+2%, -2%, +5%, -5%) atau geser derajat pengapian (+1°, -1°).
+- **Preset Kalibrasi Siap Pakai**:
+  - `stock_mio_gt.json` (OEM Pabrik 54P)
+  - `eco_mode.json` (Cruising lebih irit & advance timing responsif)
+  - `racing_exhaust.json` (Pengayaan bahan bakar +6% untuk knalpot free flow)
+  - `boreup_130cc.json` (Durasi injeksi +14%, limiter ditingkatkan ke 10,200 RPM)
+- **CO Adjustment Trim**: Slider penyesuaian bahan bakar global (-30 s/d +30).
+- **Actuator Output Test**: Uji aktif fisik untuk koil pengapian (d30 - 5x spark) dan injektor bahan bakar (d36 - 5x pulse).
+- **Terminal Raw Y-DIS Hex**: Pengiriman dan pengetesan opcode heksadesimal langsung ke ECU dengan log inspeksi respon.
+
+### 3. Perekaman & Penyimpanan Data Telemetri Lengkap
+- **Tombol Rekam CSV Langsung**: Mulai/hentikan perekaman live streaming dari bilah atas atau tab telemetri.
+- **Manajer Sesi Log Telemetri**: Tabel daftar seluruh file rekaman log telemetri CSV dengan ukuran file, timestamp, dan tombol unduh langsung (*Download CSV*).
+- **1-Click Matplotlib Plot Generator**: Tombol "Plot Grafik" pada setiap rekaman untuk merender 4-panel grafik diagnostik resolusi tinggi langsung di browser.
+
+### Cara Menjalankan Studio:
+```bash
+# Menggunakan batch file Windows (1-klik):
+run_studio.bat
+
+# Atau via python script:
+python visual_dashboard.py
+
+# Atau via command package:
+yamaha-ecu-studio
+```
+Dashboard akan otomatis terbuka di browser pada alamat **`http://localhost:8000`**.

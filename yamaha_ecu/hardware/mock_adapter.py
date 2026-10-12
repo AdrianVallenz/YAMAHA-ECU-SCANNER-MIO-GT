@@ -218,6 +218,13 @@ class MockKLineAdapter(KLineInterface):
             payload = bytes([0x64, raw_co])
             return self._build_response(0x80, payload)
 
+        # 8. Actuator Output Test (0x30)
+        elif cmd == 0x30:
+            test_code = data[3] if len(data) > 3 else 30
+            # Positive response: 0x70 [Test Code] [Status: OK 0x01]
+            payload = bytes([0x70, test_code, 0x01])
+            return self._build_response(0x80, payload)
+
         return b""
 
     def _build_response(self, header: int, payload: bytes) -> bytes:

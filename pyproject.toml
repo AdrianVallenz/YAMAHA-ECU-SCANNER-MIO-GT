@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "yamaha-ecu-toolkit"
+version = "1.1.0"
+description = "Full ECU Diagnostic, Real-Time RPS Telemetry & Tuning Software Suite for Yamaha Motorcycle (Mio GT 2015 115cc YMJET-FI)"
+readme = "README.md"
+requires-python = ">=3.8"
+authors = [
+    { name = "Adrian Vallenz" }
+]
+keywords = ["yamaha", "ecu", "diagnostic", "k-line", "ydis", "telemetry", "tuning", "obd"]
+dependencies = [
+    "pyserial>=3.5",
+    "matplotlib>=3.5.0",
+]
+
+[project.scripts]
+yamaha-ecu = "yamaha_ecu.cli:main"
+yamaha-ecu-app = "yamaha_ecu.app:main"
+yamaha-ecu-studio = "visual_dashboard:main"
